@@ -15,6 +15,6 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Remove base path to try root deployment
-  base: "/",
+  // Set base path for GitHub Pages
+  base: "/virtual-lab-simulations/",
 }));
