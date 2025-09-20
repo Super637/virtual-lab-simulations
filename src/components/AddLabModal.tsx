@@ -29,29 +29,74 @@ export const AddLabModal = ({ onAddLab }: AddLabModalProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.description || !formData.category) {
+    try {
+      // Validate required fields
+      const name = formData.name?.trim();
+      const description = formData.description?.trim();
+      const category = formData.category?.trim();
+
+      if (!name || !description || !category) {
+        toast({
+          title: "Missing Information",
+          description: "Please fill in all required fields.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate field lengths
+      if (name.length > 100) {
+        toast({
+          title: "Name Too Long",
+          description: "Lab name must be 100 characters or less.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (description.length > 500) {
+        toast({
+          title: "Description Too Long",
+          description: "Lab description must be 500 characters or less.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const sanitizedData = {
+        name: name,
+        description: description,
+        image: formData.image || "🧪",
+        category: category,
+        difficulty: formData.difficulty || "Beginner" as "Beginner" | "Intermediate" | "Advanced"
+      };
+
+      if (typeof onAddLab === 'function') {
+        onAddLab(sanitizedData);
+        setOpen(false);
+        setFormData({
+          name: "",
+          description: "",
+          image: "🧪",
+          category: "",
+          difficulty: "Beginner"
+        });
+        
+        toast({
+          title: "Lab Added Successfully!",
+          description: `${sanitizedData.name} has been added to the virtual lab collection.`
+        });
+      } else {
+        throw new Error("onAddLab function not provided");
+      }
+    } catch (error) {
+      console.error("Error adding lab:", error);
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
+        title: "Error",
+        description: "Failed to add lab. Please try again.",
         variant: "destructive"
       });
-      return;
     }
-
-    onAddLab(formData);
-    setOpen(false);
-    setFormData({
-      name: "",
-      description: "",
-      image: "🧪",
-      category: "",
-      difficulty: "Beginner"
-    });
-    
-    toast({
-      title: "Lab Added Successfully!",
-      description: `${formData.name} has been added to the virtual lab collection.`
-    });
   };
 
   return (
@@ -77,8 +122,14 @@ export const AddLabModal = ({ onAddLab }: AddLabModalProps) => {
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.length <= 100) {
+                    setFormData({ ...formData, name: value });
+                  }
+                }}
                 placeholder="e.g., Chemical Reactions Lab"
+                maxLength={100}
                 required
               />
             </div>
@@ -88,9 +139,15 @@ export const AddLabModal = ({ onAddLab }: AddLabModalProps) => {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.length <= 500) {
+                    setFormData({ ...formData, description: value });
+                  }
+                }}
                 placeholder="Describe what students will learn in this lab..."
                 className="resize-none"
+                maxLength={500}
                 rows={3}
                 required
               />
@@ -102,8 +159,14 @@ export const AddLabModal = ({ onAddLab }: AddLabModalProps) => {
                 <Input
                   id="category"
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= 50) {
+                      setFormData({ ...formData, category: value });
+                    }
+                  }}
                   placeholder="e.g., Chemistry"
+                  maxLength={50}
                   required
                 />
               </div>
@@ -135,10 +198,17 @@ export const AddLabModal = ({ onAddLab }: AddLabModalProps) => {
                   <button
                     key={emoji}
                     type="button"
-                    onClick={() => setFormData({ ...formData, image: emoji })}
+                    onClick={() => {
+                      try {
+                        setFormData({ ...formData, image: emoji });
+                      } catch (error) {
+                        console.error("Error setting emoji:", error);
+                      }
+                    }}
                     className={`p-3 text-2xl rounded-lg border-2 transition-colors hover:bg-primary/10 ${
                       formData.image === emoji ? 'border-primary bg-primary/5' : 'border-border'
                     }`}
+                    aria-label={`Select ${emoji} as lab icon`}
                   >
                     {emoji}
                   </button>

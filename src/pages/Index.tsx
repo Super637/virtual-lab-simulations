@@ -7,6 +7,8 @@ import { AddLabModal } from "@/components/AddLabModal";
 import { AdminProfile } from "@/components/AdminProfile";
 import { FloatingElements } from "@/components/FloatingElements";
 import { Crown, User, GraduationCap } from "lucide-react";
+import { ErrorBoundary } from "@/utils/errorBoundary";
+import { isValidUrl } from "@/utils/safetyHelpers";
 import adminProfile from "@/assets/admin-profile.jpg";
 
 const Index = () => {
@@ -64,33 +66,93 @@ const Index = () => {
   ]);
 
   const handleAddLab = (newLab: Omit<Lab, "id">) => {
-    const lab: Lab = {
-      ...newLab,
-      id: Date.now().toString()
-    };
-    setLabs([...labs, lab]);
+    try {
+      // Validate required fields
+      if (!newLab.name?.trim() || !newLab.description?.trim() || !newLab.category?.trim()) {
+        console.error("Invalid lab data - missing required fields:", newLab);
+        return;
+      }
+
+      const lab: Lab = {
+        ...newLab,
+        id: Date.now().toString(),
+        // Sanitize inputs
+        name: newLab.name.trim(),
+        description: newLab.description.trim(),
+        category: newLab.category.trim(),
+        difficulty: newLab.difficulty || "Beginner"
+      };
+      
+      setLabs(prevLabs => {
+        if (!Array.isArray(prevLabs)) {
+          console.error("Labs state is not an array, resetting");
+          return [lab];
+        }
+        return [...prevLabs, lab];
+      });
+    } catch (error) {
+      console.error("Error adding lab:", error);
+    }
   };
 
   const handleLabSelect = (lab: Lab) => {
-    // Map Chemistry and Physics to external URLs
-    if (lab.category === "Chemistry") {
-      window.open("https://jes-win-hac-ker.github.io/browser-lab-experiments/", "_blank");
-      return;
+    try {
+      // Validate lab object
+      if (!lab || !lab.category || !lab.name) {
+        console.error("Invalid lab object:", lab);
+        return;
+      }
+
+      // Map Chemistry and Physics to external URLs
+      if (lab.category === "Chemistry") {
+        const url = "https://jes-win-hac-ker.github.io/browser-lab-experiments/";
+        if (!isValidUrl(url)) {
+          console.error("Invalid Chemistry lab URL");
+          return;
+        }
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          console.error("Failed to open Chemistry lab - popup blocked?");
+          // Fallback: try to navigate in same window
+          window.location.href = url;
+        }
+        return;
+      }
+      
+      if (lab.category === "Physics") {
+        const url = "https://jes-win-hac-ker.github.io/interactive-physics-lab/";
+        if (!isValidUrl(url)) {
+          console.error("Invalid Physics lab URL");
+          return;
+        }
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          console.error("Failed to open Physics lab - popup blocked?");
+          // Fallback: try to navigate in same window
+          window.location.href = url;
+        }
+        return;
+      }
+      
+      // Default: just log
+      console.log("Selected lab:", lab.name);
+    } catch (error) {
+      console.error("Error selecting lab:", error);
     }
-    if (lab.category === "Physics") {
-      window.open("https://jes-win-hac-ker.github.io/interactive-physics-lab/", "_blank");
-      return;
-    }
-    // Default: just log
-    console.log("Selected lab:", lab.name);
   };
 
   if (currentView === "profile") {
-    return <AdminProfile labCount={labs.length} onBack={() => setCurrentView("labs")} />;
+    const labCount = Array.isArray(labs) ? labs.length : 0;
+    return (
+      <ErrorBoundary>
+        <AdminProfile labCount={labCount} onBack={() => setCurrentView("labs")} />
+      </ErrorBoundary>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-background relative overflow-hidden">
       <FloatingElements />
       
       {/* Header */}
@@ -160,21 +222,29 @@ const Index = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {labs.map((lab, index) => (
-            <LabCard
-              key={lab.id}
-              lab={lab}
-              index={index}
-              onSelect={handleLabSelect}
-            />
-          ))}
+          {Array.isArray(labs) && labs.length > 0 ? (
+            labs.map((lab, index) => (
+              <LabCard
+                key={lab?.id || `lab-${index}`}
+                lab={lab}
+                index={index}
+                onSelect={handleLabSelect}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-muted-foreground">No labs available. Click "Add New Lab" to get started.</p>
+            </div>
+          )}
         </div>
 
         {/* Stats Section */}
         <div className="mt-16 text-center">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-2xl mx-auto">
             <div className="slide-up">
-              <div className="text-3xl font-bold text-primary mb-2">{labs.filter(l => !l.isComingSoon).length}</div>
+              <div className="text-3xl font-bold text-primary mb-2">
+                {Array.isArray(labs) ? labs.filter(l => l && !l.isComingSoon).length : 0}
+              </div>
               <div className="text-sm text-muted-foreground">Active Labs</div>
             </div>
             <div className="slide-up-delayed">
@@ -189,6 +259,7 @@ const Index = () => {
         </div>
       </main>
     </div>
+    </ErrorBoundary>
   );
 };
 

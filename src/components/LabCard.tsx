@@ -18,7 +18,14 @@ interface LabCardProps {
 }
 
 export const LabCard = ({ lab, index, onSelect }: LabCardProps) => {
-  const delayClass = index % 3 === 0 ? "slide-up" : index % 3 === 1 ? "slide-up-delayed" : "slide-up-delayed-2";
+  // Validate props
+  if (!lab) {
+    console.error("LabCard received invalid lab prop");
+    return null;
+  }
+
+  const safeIndex = typeof index === 'number' ? index : 0;
+  const delayClass = safeIndex % 3 === 0 ? "slide-up" : safeIndex % 3 === 1 ? "slide-up-delayed" : "slide-up-delayed-2";
   
   const difficultyColors = {
     Beginner: "bg-accent text-accent-foreground",
@@ -26,10 +33,23 @@ export const LabCard = ({ lab, index, onSelect }: LabCardProps) => {
     Advanced: "bg-secondary text-secondary-foreground"
   };
 
+  const handleClick = () => {
+    try {
+      if (lab.isComingSoon) return;
+      if (typeof onSelect === 'function') {
+        onSelect(lab);
+      } else {
+        console.error("onSelect is not a function");
+      }
+    } catch (error) {
+      console.error("Error handling lab card click:", error);
+    }
+  };
+
   return (
     <Card 
       className={`lab-card ${delayClass} ${lab.isComingSoon ? 'opacity-60 cursor-not-allowed' : ''}`}
-      onClick={() => !lab.isComingSoon && onSelect(lab)}
+      onClick={handleClick}
     >
       <div className="relative p-6">
         {lab.isComingSoon && (
@@ -42,25 +62,27 @@ export const LabCard = ({ lab, index, onSelect }: LabCardProps) => {
         
         <div className="mb-4">
           <div className="w-full h-32 rounded-lg hero-gradient flex items-center justify-center text-6xl mb-4">
-            {lab.image}
+            {lab.image || "🧪"}
           </div>
         </div>
         
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-card-foreground">{lab.name}</h3>
-            <Badge className={difficultyColors[lab.difficulty]}>
-              {lab.difficulty}
+            <h3 className="text-lg font-semibold text-card-foreground">
+              {lab.name || "Untitled Lab"}
+            </h3>
+            <Badge className={difficultyColors[lab.difficulty] || difficultyColors.Beginner}>
+              {lab.difficulty || "Beginner"}
             </Badge>
           </div>
           
           <p className="text-muted-foreground text-sm leading-relaxed">
-            {lab.description}
+            {lab.description || "No description available"}
           </p>
           
           <div className="pt-2">
             <Badge variant="outline" className="text-xs">
-              {lab.category}
+              {lab.category || "General"}
             </Badge>
           </div>
         </div>
