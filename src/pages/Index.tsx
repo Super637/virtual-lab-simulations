@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -10,11 +10,47 @@ import { Crown, User, GraduationCap } from "lucide-react";
 import { ErrorBoundary } from "@/utils/errorBoundary";
 import { isValidUrl } from "@/utils/safetyHelpers";
 import { useToast } from "@/hooks/use-toast";
+import { debugLogger } from "@/utils/debugLogger";
 import adminProfile from "@/assets/admin-profile.jpg";
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<"labs" | "profile">("labs");
   const { toast } = useToast();
+
+  // Initialize debugging
+  useEffect(() => {
+    debugLogger.info('INDEX_COMPONENT', 'Virtual Lab Simulations app initialized', {
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      viewportSize: {
+        width: window.innerWidth,
+        height: window.innerHeight
+      },
+      systemInfo: debugLogger.getSystemInfo()
+    });
+
+    // Log performance metrics
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        debugLogger.debug('PERFORMANCE', `${entry.entryType}: ${entry.name}`, {
+          duration: entry.duration,
+          startTime: entry.startTime
+        });
+      }
+    });
+    
+    try {
+      observer.observe({ entryTypes: ['navigation', 'paint', 'largest-contentful-paint'] });
+    } catch (e) {
+      debugLogger.warn('PERFORMANCE', 'Could not initialize performance observer', { error: e });
+    }
+
+    return () => {
+      observer.disconnect();
+      debugLogger.info('INDEX_COMPONENT', 'Component unmounting');
+    };
+  }, []);
+
   const [labs, setLabs] = useState<Lab[]>([
     {
       id: "1",
@@ -68,10 +104,27 @@ const Index = () => {
   ]);
 
   const handleAddLab = (newLab: Omit<Lab, "id">) => {
+    debugLogger.info('ADD_LAB', 'User attempting to add new lab', {
+      labName: newLab.name,
+      labCategory: newLab.category,
+      labDifficulty: newLab.difficulty
+    });
+
     try {
       // Validate required fields
       if (!newLab.name?.trim() || !newLab.description?.trim() || !newLab.category?.trim()) {
+        debugLogger.error('ADD_LAB', 'Invalid lab data - missing required fields', {
+          hasName: !!newLab.name?.trim(),
+          hasDescription: !!newLab.description?.trim(),
+          hasCategory: !!newLab.category?.trim(),
+          providedData: newLab
+        });
         console.error("Invalid lab data - missing required fields:", newLab);
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields.",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -85,30 +138,97 @@ const Index = () => {
         difficulty: newLab.difficulty || "Beginner"
       };
       
+      debugLogger.info('ADD_LAB', 'Lab data validated and sanitized', {
+        labId: lab.id,
+        sanitizedName: lab.name,
+        sanitizedCategory: lab.category,
+        finalDifficulty: lab.difficulty
+      });
+      
       setLabs(prevLabs => {
         if (!Array.isArray(prevLabs)) {
+          debugLogger.warn('ADD_LAB', 'Labs state is not an array, resetting', {
+            currentLabsType: typeof prevLabs,
+            currentLabsValue: prevLabs
+          });
           console.error("Labs state is not an array, resetting");
           return [lab];
         }
+        debugLogger.info('ADD_LAB', 'Adding lab to existing labs array', {
+          currentLabCount: prevLabs.length,
+          newLabId: lab.id
+        });
         return [...prevLabs, lab];
       });
+      
+      debugLogger.info('ADD_LAB', 'Lab successfully added', {
+        labId: lab.id,
+        labName: lab.name,
+        totalLabCount: labs.length + 1
+      });
+
+      toast({
+        title: "Success",
+        description: `Lab "${lab.name}" has been added successfully!`,
+      });
+
     } catch (error) {
+      debugLogger.error('ADD_LAB', 'Error occurred while adding lab', {
+        labData: newLab,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined
+      }, error instanceof Error ? error : new Error(String(error)));
+      
       console.error("Error adding lab:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add lab. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleLabSelect = (lab: Lab) => {
+    debugLogger.info('LAB_SELECT', 'User attempting to select lab', {
+      labId: lab.id,
+      labName: lab.name,
+      labCategory: lab.category,
+      timestamp: Date.now()
+    });
+
     try {
       // Validate lab object
       if (!lab || !lab.category || !lab.name) {
+        debugLogger.error('LAB_SELECT', 'Invalid lab object provided', {
+          lab: lab,
+          hasCategory: !!lab?.category,
+          hasName: !!lab?.name
+        });
         console.error("Invalid lab object:", lab);
+        toast({
+          title: "Error",
+          description: "Invalid lab configuration. Please try again.",
+          variant: "destructive"
+        });
         return;
       }
+
+      debugLogger.info('LAB_SELECT', 'Lab validation passed', {
+        labCategory: lab.category,
+        labName: lab.name
+      });
 
       // Map Chemistry and Physics to external URLs
       if (lab.category === "Chemistry") {
         const url = "https://jes-win-hac-ker.github.io/browser-lab-experiments/";
+        
+        debugLogger.info('LAB_ACCESS', 'Attempting to open Chemistry lab', {
+          url: url,
+          labName: lab.name
+        });
+
         if (!isValidUrl(url)) {
+          debugLogger.error('LAB_ACCESS', 'Invalid Chemistry lab URL', { url: url });
           console.error("Invalid Chemistry lab URL");
           toast({
             title: "Error",
@@ -124,9 +244,14 @@ const Index = () => {
         });
         
         // Try to open in new tab with better options
+        debugLogger.debug('LAB_ACCESS', 'Attempting window.open for Chemistry lab');
         const opened = window.open(url, "_blank", "noopener,noreferrer,width=1200,height=800");
         
         if (!opened || opened.closed || typeof opened.closed == 'undefined') {
+          debugLogger.warn('LAB_ACCESS', 'Popup blocked for Chemistry lab, using fallback method', {
+            opened: !!opened,
+            closed: opened?.closed
+          });
           console.warn("Popup blocked, trying alternative method");
           toast({
             title: "Popup Blocked",
@@ -141,13 +266,25 @@ const Index = () => {
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
+          debugLogger.info('LAB_ACCESS', 'Fallback link method executed for Chemistry lab');
+        } else {
+          debugLogger.info('LAB_ACCESS', 'Chemistry lab opened successfully via window.open');
         }
+        
+        debugLogger.logLabAccess('Chemistry', url, true);
         return;
       }
       
       if (lab.category === "Physics") {
         const url = "https://jes-win-hac-ker.github.io/interactive-physics-lab/";
+        
+        debugLogger.info('LAB_ACCESS', 'Attempting to open Physics lab', {
+          url: url,
+          labName: lab.name
+        });
+
         if (!isValidUrl(url)) {
+          debugLogger.error('LAB_ACCESS', 'Invalid Physics lab URL', { url: url });
           console.error("Invalid Physics lab URL");
           toast({
             title: "Error",
@@ -163,9 +300,14 @@ const Index = () => {
         });
         
         // Try to open in new tab with better options
+        debugLogger.debug('LAB_ACCESS', 'Attempting window.open for Physics lab');
         const opened = window.open(url, "_blank", "noopener,noreferrer,width=1200,height=800");
         
         if (!opened || opened.closed || typeof opened.closed == 'undefined') {
+          debugLogger.warn('LAB_ACCESS', 'Popup blocked for Physics lab, using fallback method', {
+            opened: !!opened,
+            closed: opened?.closed
+          });
           console.warn("Popup blocked, trying alternative method");
           toast({
             title: "Popup Blocked",
@@ -180,19 +322,46 @@ const Index = () => {
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
+          debugLogger.info('LAB_ACCESS', 'Fallback link method executed for Physics lab');
+        } else {
+          debugLogger.info('LAB_ACCESS', 'Physics lab opened successfully via window.open');
         }
+        
+        debugLogger.logLabAccess('Physics', url, true);
         return;
       }
       
       // Default: show info for other labs
+      debugLogger.info('LAB_SELECT', 'Other lab selected (not Chemistry/Physics)', {
+        labCategory: lab.category,
+        labName: lab.name
+      });
+
+      const isComingSoon = lab.category === "Biology" || lab.category === "Astronomy" || lab.category === "Genetics";
+      const description = isComingSoon 
+        ? "This lab simulation is coming soon!" 
+        : "Lab functionality will be added in future updates.";
+
       toast({
         title: `Selected: ${lab.name}`,
-        description: lab.category === "Biology" || lab.category === "Astronomy" || lab.category === "Genetics" 
-          ? "This lab simulation is coming soon!" 
-          : "Lab functionality will be added in future updates.",
+        description: description,
       });
+      
+      debugLogger.logUserInteraction('lab_selected_other', lab.category, {
+        labName: lab.name,
+        isComingSoon: isComingSoon
+      });
+      
       console.log("Selected lab:", lab.name);
     } catch (error) {
+      debugLogger.error('LAB_SELECT', 'Error occurred while selecting lab', {
+        labId: lab?.id,
+        labName: lab?.name,
+        labCategory: lab?.category,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined
+      }, error instanceof Error ? error : new Error(String(error)));
+      
       console.error("Error selecting lab:", error);
       toast({
         title: "Error",
