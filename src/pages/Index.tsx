@@ -271,38 +271,13 @@ const Index = () => {
         
         toast({
           title: "Opening Physics Lab",
-          description: "Loading interactive physics experiments...",
+          description: "Redirecting to interactive physics experiments...",
         });
         
-        // Try to open in new tab with better options
-        debugLogger.debug('LAB_ACCESS', 'Attempting window.open for Physics lab');
-        const opened = window.open(url, "_blank", "noopener,noreferrer,width=1200,height=800");
-        
-        if (!opened || opened.closed || typeof opened.closed == 'undefined') {
-          debugLogger.warn('LAB_ACCESS', 'Popup blocked for Physics lab, using fallback method', {
-            opened: !!opened,
-            closed: opened?.closed
-          });
-          console.warn("Popup blocked, trying alternative method");
-          toast({
-            title: "Popup Blocked",
-            description: "Trying alternative method to open lab...",
-            variant: "destructive"
-          });
-          // Create a temporary link and click it
-          const link = document.createElement('a');
-          link.href = url;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          debugLogger.info('LAB_ACCESS', 'Fallback link method executed for Physics lab');
-        } else {
-          debugLogger.info('LAB_ACCESS', 'Physics lab opened successfully via window.open');
-        }
-        
+        // Redirect to Physics lab in the same tab
+        debugLogger.debug('LAB_ACCESS', 'Redirecting to Physics lab in same tab');
         debugLogger.logLabAccess('Physics', url, true);
+        window.location.href = url;
         return;
       }
       
