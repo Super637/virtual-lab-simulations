@@ -15,5 +15,6 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  base: mode === "production" ? "/virtual-lab-simulations/" : "/",
+  // Remove base path to try root deployment
+  base: "/",
 }));
