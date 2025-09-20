@@ -9,10 +9,12 @@ import { FloatingElements } from "@/components/FloatingElements";
 import { Crown, User, GraduationCap } from "lucide-react";
 import { ErrorBoundary } from "@/utils/errorBoundary";
 import { isValidUrl } from "@/utils/safetyHelpers";
+import { useToast } from "@/hooks/use-toast";
 import adminProfile from "@/assets/admin-profile.jpg";
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<"labs" | "profile">("labs");
+  const { toast } = useToast();
   const [labs, setLabs] = useState<Lab[]>([
     {
       id: "1",
@@ -108,13 +110,37 @@ const Index = () => {
         const url = "https://jes-win-hac-ker.github.io/browser-lab-experiments/";
         if (!isValidUrl(url)) {
           console.error("Invalid Chemistry lab URL");
+          toast({
+            title: "Error",
+            description: "Invalid Chemistry lab URL",
+            variant: "destructive"
+          });
           return;
         }
-        const opened = window.open(url, "_blank", "noopener,noreferrer");
-        if (!opened) {
-          console.error("Failed to open Chemistry lab - popup blocked?");
-          // Fallback: try to navigate in same window
-          window.location.href = url;
+        
+        toast({
+          title: "Opening Chemistry Lab",
+          description: "Loading interactive chemistry experiments...",
+        });
+        
+        // Try to open in new tab with better options
+        const opened = window.open(url, "_blank", "noopener,noreferrer,width=1200,height=800");
+        
+        if (!opened || opened.closed || typeof opened.closed == 'undefined') {
+          console.warn("Popup blocked, trying alternative method");
+          toast({
+            title: "Popup Blocked",
+            description: "Trying alternative method to open lab...",
+            variant: "destructive"
+          });
+          // Create a temporary link and click it
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }
         return;
       }
@@ -123,21 +149,56 @@ const Index = () => {
         const url = "https://jes-win-hac-ker.github.io/interactive-physics-lab/";
         if (!isValidUrl(url)) {
           console.error("Invalid Physics lab URL");
+          toast({
+            title: "Error",
+            description: "Invalid Physics lab URL",
+            variant: "destructive"
+          });
           return;
         }
-        const opened = window.open(url, "_blank", "noopener,noreferrer");
-        if (!opened) {
-          console.error("Failed to open Physics lab - popup blocked?");
-          // Fallback: try to navigate in same window
-          window.location.href = url;
+        
+        toast({
+          title: "Opening Physics Lab",
+          description: "Loading interactive physics experiments...",
+        });
+        
+        // Try to open in new tab with better options
+        const opened = window.open(url, "_blank", "noopener,noreferrer,width=1200,height=800");
+        
+        if (!opened || opened.closed || typeof opened.closed == 'undefined') {
+          console.warn("Popup blocked, trying alternative method");
+          toast({
+            title: "Popup Blocked",
+            description: "Trying alternative method to open lab...",
+            variant: "destructive"
+          });
+          // Create a temporary link and click it
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }
         return;
       }
       
-      // Default: just log
+      // Default: show info for other labs
+      toast({
+        title: `Selected: ${lab.name}`,
+        description: lab.category === "Biology" || lab.category === "Astronomy" || lab.category === "Genetics" 
+          ? "This lab simulation is coming soon!" 
+          : "Lab functionality will be added in future updates.",
+      });
       console.log("Selected lab:", lab.name);
     } catch (error) {
       console.error("Error selecting lab:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open lab. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -219,6 +280,12 @@ const Index = () => {
             <h2 className="text-2xl font-semibold text-foreground">Available Laboratories</h2>
           </div>
           <p className="text-muted-foreground">Choose from our collection of interactive virtual labs</p>
+          <div className="mt-4 p-4 bg-muted/30 rounded-lg max-w-2xl mx-auto">
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">Chemistry & Physics labs</strong> will open in a new tab. 
+              If you see a white screen, please wait a moment for the interactive content to load or refresh the page.
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
