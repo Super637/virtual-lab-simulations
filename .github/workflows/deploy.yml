@@ -35,6 +35,14 @@ jobs:
     - name: Build
       run: npm run build
 
+    - name: Copy files to root for GitHub Pages
+      run: |
+        cp dist/index.html ./index.html
+        cp -r dist/assets ./assets || true
+        cp dist/favicon.ico ./favicon.ico || true
+        cp dist/placeholder.svg ./placeholder.svg || true
+        cp dist/robots.txt ./robots.txt || true
+
     - name: Setup Pages
       uses: actions/configure-pages@v4
 
