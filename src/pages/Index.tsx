@@ -72,7 +72,16 @@ const Index = () => {
   };
 
   const handleLabSelect = (lab: Lab) => {
-    // In a real app, this would navigate to the lab
+    // Map Chemistry and Physics to external URLs
+    if (lab.category === "Chemistry") {
+      window.open("https://jes-win-hac-ker.github.io/browser-lab-experiments/", "_blank");
+      return;
+    }
+    if (lab.category === "Physics") {
+      window.open("https://jes-win-hac-ker.github.io/interactive-physics-lab/", "_blank");
+      return;
+    }
+    // Default: just log
     console.log("Selected lab:", lab.name);
   };
 
